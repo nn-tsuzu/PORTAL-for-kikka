@@ -125,7 +125,7 @@ def extract_clip_patch_features_for_kikka(
                 Image.open(p).convert("RGB")
                 for p in paths[i:i + batch_size]
             ]
-            inputs = processor(images=images, return_tensors="pt",).to(device)
+            inputs = processor(images=images, return_tensors="pt", padding=False).to(device)
             current_features.clear()
 
             _ = model.model.get_image_features(
