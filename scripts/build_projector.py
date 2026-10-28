@@ -37,7 +37,7 @@ from pathlib import Path
 
 from loguru import logger
 
-from ..portal import (
+from portal import (
     construct_portal,
     construct_portal_ctx,
     construct_portal_for_kikka,
@@ -63,6 +63,11 @@ def parse_args() -> argparse.Namespace:
             config_defaults = yaml.safe_load(f) or {}
 
     p = argparse.ArgumentParser(parents=[pre], description="Construct a PORTAL projector.")
+    p.add_argument(
+        "--model-type",
+        choices=["clip", "kikka"],
+        default="kikka",
+    )
     p.add_argument(
         "--method",
         choices=["portal", "random"],
