@@ -24,6 +24,7 @@ __all__ = [
     "build_portal",
     "construct_portal",
     "construct_portal_ctx",
+    "construct_portal_for_kikka",
     "vision_source_stats",
     "pca_stats",
     "extract_clip_patch_features",
