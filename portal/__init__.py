@@ -12,9 +12,9 @@ paired image-caption data nor gradient-based optimization.
 
 from .baselines import random_baseline
 from .construct import build_portal, make_projector_state_dict
-from .features import extract_clip_patch_features
+from .features import extract_clip_patch_features, extract_clip_patch_features_for_kikka
 from .io import load_projector, save_projector, validate_projector
-from .pipeline import construct_portal, construct_portal_ctx, vision_source_stats
+from .pipeline import construct_portal, construct_portal_for_kikka, construct_portal_ctx, vision_source_stats, vision_source_stats_for_kikka
 from .stats import pca_stats
 from .targets import llm_embedding_table, llm_hidden_states
 
@@ -26,8 +26,10 @@ __all__ = [
     "construct_portal_ctx",
     "construct_portal_for_kikka",
     "vision_source_stats",
+    "vision_source_stats_for_kikka",
     "pca_stats",
     "extract_clip_patch_features",
+    "extract_clip_patch_features_for_kikka",
     "llm_embedding_table",
     "llm_hidden_states",
     "random_baseline",
