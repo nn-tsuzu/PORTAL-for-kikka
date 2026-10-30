@@ -32,7 +32,7 @@ def _load_llm(model_name: str, dtype: torch.dtype):
         from transformers import AutoModelForCausalLM
 
         cls = AutoModelForCausalLM
-    return cls.from_pretrained(model_name, torch_dtype=dtype, low_cpu_mem_usage=True)
+    return cls.from_pretrained(model_name, torch_dtype=dtype, low_cpu_mem_usage=True, trust_remote_code=True)
 
 
 def _text_decoder(model):
@@ -68,7 +68,7 @@ def llm_hidden_states(
 
     Used by PORTAL-ctx-L (layer > 0); layer=0 is the input embeddings, for which
     llm_embedding_table is preferred. `layer` indexes output_hidden_states
-    (0 = embeddings, L = after block L). `prompts` are words/short phrases run
+    (0 = embeddings, L  = after block L). `prompts` are words/short phrases run
     through the LLM; fp16 on CUDA, fp32 on CPU. Returns (num_tokens, d_model) on
     CPU in float32, with padding removed via the attention mask.
     """
