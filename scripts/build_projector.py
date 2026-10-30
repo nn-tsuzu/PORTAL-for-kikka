@@ -69,6 +69,10 @@ def parse_args() -> argparse.Namespace:
         default="kikka",
     )
     p.add_argument(
+        "--max_tokens-per-image",
+        default=64,
+    )
+    p.add_argument(
         "--method",
         choices=["portal", "random"],
         default="portal",
@@ -170,7 +174,7 @@ def main() -> None:
             n_images=args.n_images,
             max_scale_ratio=max_scale,
             batch_size=args.batch_size,
-            seed=args.seed,
+            max_tokens_per_image=args.max_tokens_per_image,
             device=args.device,
         )
 
