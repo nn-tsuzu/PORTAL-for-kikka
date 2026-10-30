@@ -66,11 +66,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--model-type",
         choices=["clip", "kikka"],
-        default="kikka",
-    )
-    p.add_argument(
-        "--max_tokens-per-image",
-        default=64,
+        default="clip",
     )
     p.add_argument(
         "--method",
@@ -119,7 +115,7 @@ def parse_args() -> argparse.Namespace:
         help="Optional LLaVA checkpoint dir whose config.json is copied alongside.",
     )
     p.add_argument("--seed", type=int, default=42)
-    p.add_argument("--device", default=None, help="Defaults to CUDA when available.")
+    p.add_argument("--device", default="cuda", help="Defaults to CUDA when available.")
     p.set_defaults(**config_defaults)
     return p.parse_args()
 
@@ -174,7 +170,7 @@ def main() -> None:
             n_images=args.n_images,
             max_scale_ratio=max_scale,
             batch_size=args.batch_size,
-            max_tokens_per_image=args.max_tokens_per_image,
+            seed=args.seed,
             device=args.device,
         )
 
