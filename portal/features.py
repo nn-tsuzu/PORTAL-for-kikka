@@ -27,7 +27,7 @@ def extract_clip_patch_features(
     """Per-patch CLIP features over an image pool (the PORTAL source).
 
     Reads patch tokens from the penultimate layer (layer=-2) and drops the CLS
-    token, matching LLaVA's mm_vision_select_layer=-2 / select_feature=patch. A
+    token, matching LLaVA's  mm_vision_select_layer=-2 / select_feature=patch. A
     generic pool such as COCO val2017 is enough (paper Sec. 5.3). Returns
     (n_images, num_patches, d_vision) on CPU.
     """
@@ -54,9 +54,7 @@ def extract_clip_patch_features(
     feats: list[Tensor] = []
     for i in tqdm(range(0, len(paths), batch_size), desc="CLIP patches"):
         images = [Image.open(p).convert("RGB") for p in paths[i : i + batch_size]]
-        pixel_values = processor(images=images, return_tensors="pt")[
-            "pixel_values"
-        ].to(device)
+        pixel_values = processor(images=images, return_tensors="pt")["pixel_values"].to(device)
         with torch.no_grad():
             out = model(pixel_values=pixel_values, output_hidden_states=True)
         patch = out.hidden_states[layer][:, 1:, :]  # drop CLS token
@@ -81,10 +79,61 @@ def extract_clip_patch_features_for_kikka(
 ) -> Tensor:
     """
     kikkaモデル用のextract_clip_patch_features。
-    processorとmodelの読み込みをKikka対応にし、
+    processorとmodelの読み込みをKikka対応に
     """
     from PIL import Image
     from transformers import AutoModelForCausalLM, AutoProcessor
+
+    if device is None:
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    image_dir = Path(image_dir)
+    patterns = ("*.jpg", "*.jpeg", "*.png", "*.JPG", "*.JPEG", "*.PNG")
+    paths = sorted({p for pat in patterns for p in image_dir.glob(pat)})
+    if not paths:
+        raise FileNotFoundError(f"no .jpg/.jpeg/.png images found under {image_dir}")
+
+    gen = torch.Generator().manual_seed(42)
+    perm = torch.randperm(len(paths), generator=gen)[:n_images]
+    paths = [paths[i] for i in perm]
+    logger.info("extracting CLIP patch features from {} images", len(paths))
+
+    # load the model
+    processor = AutoProcessor.from_pretrained(clip_model,trust_remote_code=True,)
+    model = AutoModelForCausalLM.from_pretrained(clip_model,trust_remote_code=True,).to(device).eval()
+
+    feats: list[Tensor] = []
+    for i in tqdm(range(0, len(paths), batch_size), desc="CLIP patches"):
+        images = [Image.open(p).convert("RGB") for p in paths[i : i + batch_size]]
+        pixel_values = processor(images=images, return_tensors="pt").to(device)
+        outputs = model.model.get_image_features(pixel_values["pixel_values"], pixel_values["image_position_ids"])
+        patch = outputs.pooler_output
+        feats.append(patch.float().cpu())
+
+    del model
+    if str(device).startswith("cuda"):
+        torch.cuda.empty_cache()
+
+    features = torch.cat(feats, dim=0)
+    logger.info("vision patch features: {}", tuple(features.shape))
+    return features
+
+
+def extract_clip_patch_features_for_kikka_test (
+    image_dir: str | Path,
+    clip_model: str = "openai/clip-vit-large-patch14-336",
+    n_images: int = 1024,
+    batch_size: int = 8,
+    max_tokens_per_image=64,
+    device="cuda",
+) -> Tensor:
+    """
+    kikkaモデル用のextract_clip_patch_features。
+    processorとmodelの読み込みをKikka対応に
+    """
+    from PIL import Image
+    from transformers import AutoModelForCausalLM, AutoProcessor
+
     image_dir = Path(image_dir)
 
     # gen and perm
@@ -98,7 +147,6 @@ def extract_clip_patch_features_for_kikka(
     
     def hook(module, inputs):
         x = inputs[0].detach()
-
         # [B, N, 3840]
         assert x.ndim == 3
         assert x.shape[-1] == 3840
@@ -125,7 +173,7 @@ def extract_clip_patch_features_for_kikka(
                 Image.open(p).convert("RGB")
                 for p in paths[i:i + batch_size]
             ]
-            inputs = processor(images=images, return_tensors="pt", padding=False).to(device)
+            inputs = processor(images=images, return_tensors="pt").to(device)
             current_features.clear()
 
             _ = model.model.get_image_features(
