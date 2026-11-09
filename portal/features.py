@@ -69,7 +69,7 @@ def extract_clip_patch_features(
     return features
 
 
-def extract_clip_patch_features_for_kikka(
+def extract_clip_patch_features_for_kikka_test(
     image_dir: str | Path,
     clip_model: str = "openai/clip-vit-large-patch14-336",
     n_images: int = 1024,
@@ -106,7 +106,10 @@ def extract_clip_patch_features_for_kikka(
     for i in tqdm(range(0, len(paths), batch_size), desc="CLIP patches"):
         images = [Image.open(p).convert("RGB") for p in paths[i : i + batch_size]]
         inputs = processor(images=images, return_tensors="pt").to(device)
-        outputs = model.model.get_image_features(inputs["pixel_values"], inputs["image_position_ids"])
+        outputs = model.model.get_image_features(
+            pixel_values=inputs["pixel_values"],
+            image_position_ids=inputs["image_position_ids"],
+        )
         patch = outputs.pooler_output
         feats.append(patch.float().cpu())
 
@@ -119,7 +122,7 @@ def extract_clip_patch_features_for_kikka(
     return features
 
 
-def extract_clip_patch_features_for_kikka_test(
+def extract_clip_patch_features_for_kikka(
     image_dir: str | Path,
     clip_model: str = "openai/clip-vit-large-patch14-336",
     n_images: int = 1024,
@@ -169,10 +172,7 @@ def extract_clip_patch_features_for_kikka_test(
 
     try:
         for i in tqdm(range(0, len(paths), batch_size)):
-            images = [
-                Image.open(p).convert("RGB")
-                for p in paths[i:i + batch_size]
-            ]
+            images = [Image.open(p).convert("RGB") for p in paths[i:i + batch_size]]
             inputs = processor(images=images, return_tensors="pt").to(device)
             current_features.clear()
 
