@@ -69,7 +69,7 @@ def extract_clip_patch_features(
     return features
 
 
-def extract_clip_patch_features_for_kikka(
+def extract_clip_patch_features_for_kikka_test(
     image_dir: str | Path,
     clip_model: str = "openai/clip-vit-large-patch14-336",
     n_images: int = 1024,
@@ -120,7 +120,7 @@ def extract_clip_patch_features_for_kikka(
     return features
 
 
-def extract_clip_patch_features_for_kikka_test(
+def extract_clip_patch_features_for_kikka(
     image_dir: str | Path,
     clip_model: str = "openai/clip-vit-large-patch14-336",
     n_images: int = 1024,
