@@ -69,7 +69,7 @@ def extract_clip_patch_features(
     return features
 
 
-def extract_clip_patch_features_for_kikka_test(
+def extract_clip_patch_features_for_kikka(
     image_dir: str | Path,
     clip_model: str = "openai/clip-vit-large-patch14-336",
     n_images: int = 1024,
@@ -105,12 +105,10 @@ def extract_clip_patch_features_for_kikka_test(
     feats: list[Tensor] = []
     for i in tqdm(range(0, len(paths), batch_size), desc="CLIP patches"):
         images = [Image.open(p).convert("RGB") for p in paths[i : i + batch_size]]
-        inputs = processor(images=images, return_tensors="pt").to(device)
-        outputs = model.model.get_image_features(
-            pixel_values=inputs["pixel_values"],
-            image_position_ids=inputs["image_position_ids"],
-        )
-        patch = outputs.pooler_output
+        pixel_values = processor(images=images, return_tensors="pt")["pixel_values"].to(device)
+        with torch.no_grad():
+            out = model(pixel_values=pixel_values, output_hidden_states=True)
+        patch = out.hidden_states[-2][:, 1:, :]
         feats.append(patch.float().cpu())
 
     del model
@@ -122,7 +120,7 @@ def extract_clip_patch_features_for_kikka_test(
     return features
 
 
-def extract_clip_patch_features_for_kikka(
+def extract_clip_patch_features_for_kikka_test(
     image_dir: str | Path,
     clip_model: str = "openai/clip-vit-large-patch14-336",
     n_images: int = 1024,
