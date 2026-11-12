@@ -103,6 +103,7 @@ def extract_clip_patch_features_for_kikka(
             image_position_ids=inputs["image_position_ids"],
             return_pre_projector=True
         )
+        pre = pre["pooler_output"]
 
         if isinstance(pre, (list, tuple)):
             samples = list(pre)
