@@ -79,59 +79,41 @@ def extract_clip_patch_features_for_kikka(
 ) -> Tensor:
     """
     kikkaモデル用のextract_clip_patch_features。
-    processorとmodelの読み込みをKikka対応に
+    processorとmodelの読み込みをKikka対応にし、
     """
     from PIL import Image
     from transformers import AutoModelForCausalLM, AutoProcessor
-
     image_dir = Path(image_dir)
 
     # gen and perm
-    paths = sorted(
-        p for p in image_dir.iterdir()
-        if p.suffix.lower() in {".jpg", ".jpeg", ".png"}
-    )[:n_images]
-
-    collected = []
-    current_features = []
-    
-    def hook(module, inputs):
-        x = inputs[0].detach()
-        # [B, N, 3840]
-        assert x.ndim == 3
-        assert x.shape[-1] == 3840
-
-        # 画像ごとにサンプリング
-        for sample in x:
-            if sample.shape[0] > max_tokens_per_image:
-                indices = torch.randperm(
-                    sample.shape[0],
-                    device=sample.device,
-                )[:max_tokens_per_image]
-
-                sample = sample[indices]
-            current_features.append(sample.float().cpu())
+    paths = sorted(p for p in image_dir.iterdir() if p.suffix.lower() in {".jpg", ".jpeg", ".png"})[:n_images]
 
     # load the model
     processor = AutoProcessor.from_pretrained(clip_model,trust_remote_code=True,)
     model = AutoModelForCausalLM.from_pretrained(clip_model,trust_remote_code=True,).to(device).eval()
-    handle = model.model.embed_vision.multimodal_embedder.projector.register_forward_pre_hook(hook)
+    dtype = next(model.parameters()).dtype
 
-    try:
-        for i in tqdm(range(0, len(paths), batch_size)):
-            images = [Image.open(p).convert("RGB") for p in paths[i:i + batch_size]]
-            inputs = processor(images=images, return_tensors="pt").to(device)
-            current_features.clear()
+    collected = []
+    for i in tqdm(range(0, len(paths), batch_size)):
+        images = [Image.open(p).convert("RGB") for p in paths[i:i + batch_size]]
+        inputs = processor(images=images, return_tensors="pt").to(device)
 
-            _ = model.model.get_image_features(
-                pixel_values=inputs["pixel_values"],
-                image_position_ids=inputs["image_position_ids"],
-                return_pre_projector=True
-            )
+        pre = model.model.get_image_features(
+            pixel_values=inputs["pixel_values"].to(dtype),
+            image_position_ids=inputs["image_position_ids"],
+            return_pre_projector=True
+        )
 
-            if not current_features:
-                raise RuntimeError("coundn't called projector's hook")
-            collected.extend(current_features)
-    finally:
-        handle.remove()
+        if isinstance(pre, (list, tuple)):
+            samples = list(pre)
+        else:
+            samples = list(pre)
+
+        for s in samples:
+            s = s.reshape(-1, s.shape[-1])
+            assert s.shape[-1] == 3840, s.shape
+            if s.shape[0] > max_tokens_per_image:
+                idx = torch.randperm(s.shape[0], device=s.device)[:max_tokens_per_image]
+                s = s[idx]
+            collected.append(s.float().cpu())
     return torch.cat(collected, dim=0)
